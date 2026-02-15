@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>旅行プランナー — フランス旅行準備ガイド</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>🇫🇷 旅行プランナー</h1>
+    <p class="subtitle">行き先・日数・興味を選んで、あなただけの旅行プランを自動生成</p>
+    <nav>
+      <ul>
+        <li><a href="index.html">トップに戻る</a></li>
+        <li><a href="conversations.html">会話集</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <section>
+    <h2>プランを作成</h2>
+    <div class="card">
+      <div class="form-group">
+        <label for="region">行き先</label>
+        <select id="region"></select>
+      </div>
+
+      <div class="form-group">
+        <label for="days">日数（1〜7日）</label>
+        <input type="number" id="days" min="1" max="7" value="3">
+      </div>
+
+      <div class="form-group">
+        <label>興味のあるジャンル</label>
+        <div class="checkbox-group" id="categories"></div>
+      </div>
+
+      <button class="btn-primary" id="generate">プランを生成する</button>
+      <button class="btn-secondary" id="regenerate" style="display:none; margin-left:10px;">別のプランを見る</button>
+    </div>
+  </section>
+
+  <div id="result"></div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>フランス旅行準備ガイド &copy; 2026</p>
+    <p>渡航前に必ず<a href="https://www.anzen.mofa.go.jp/" target="_blank" rel="noopener">外務省 海外安全ホームページ</a>で最新情報をご確認ください。</p>
+  </div>
+</footer>
+
+<script src="spots.js"></script>
+<script>
+(function () {
+  const regionSelect = document.getElementById("region");
+  const daysInput = document.getElementById("days");
+  const categoriesEl = document.getElementById("categories");
+  const resultEl = document.getElementById("result");
+  const generateBtn = document.getElementById("generate");
+  const regenerateBtn = document.getElementById("regenerate");
+
+  // Populate region select
+  Object.entries(REGIONS).forEach(([key, label]) => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = label;
+    regionSelect.appendChild(opt);
+  });
+
+  // Populate category checkboxes
+  Object.entries(CATEGORIES).forEach(([key, label]) => {
+    const lbl = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = key;
+    cb.checked = true;
+    const span = document.createElement("span");
+    span.textContent = label;
+    lbl.appendChild(cb);
+    lbl.appendChild(span);
+    categoriesEl.appendChild(lbl);
+  });
+
+  const TIME_SLOTS = [
+    { key: "morning", label: "午前", cssClass: "slot-morning" },
+    { key: "afternoon", label: "午後", cssClass: "slot-afternoon" },
+    { key: "evening", label: "夜", cssClass: "slot-evening" }
+  ];
+
+  function getSelectedCategories() {
+    return Array.from(categoriesEl.querySelectorAll("input:checked")).map(cb => cb.value);
+  }
+
+  function scoreSpot(spot, selectedCategories) {
+    let score = 0;
+    spot.categories.forEach(cat => {
+      if (selectedCategories.includes(cat)) score += 2;
+    });
+    // Small random factor for variety
+    score += Math.random();
+    return score;
+  }
+
+  function generatePlan() {
+    const region = regionSelect.value;
+    const days = Math.max(1, Math.min(7, parseInt(daysInput.value) || 3));
+    const selectedCategories = getSelectedCategories();
+
+    daysInput.value = days;
+
+    if (selectedCategories.length === 0) {
+      resultEl.innerHTML = '<div class="card" style="text-align:center; color:var(--red);">興味のあるジャンルを1つ以上選択してください。</div>';
+      return;
+    }
+
+    // Filter spots for selected region
+    const regionSpots = SPOTS.filter(s => s.region === region);
+
+    // Score and sort
+    const scored = regionSpots.map(spot => ({
+      spot,
+      score: scoreSpot(spot, selectedCategories)
+    })).sort((a, b) => b.score - a.score);
+
+    // Build day plans
+    const totalSlots = days * 3;
+    const usedIds = new Set();
+    const plan = [];
+
+    for (let d = 0; d < days; d++) {
+      const daySlots = [];
+      for (let s = 0; s < TIME_SLOTS.length; s++) {
+        const slotKey = TIME_SLOTS[s].key;
+
+        // Try to find a matching spot for this time slot
+        let assigned = null;
+
+        // First pass: match preferred timeSlot
+        for (const item of scored) {
+          if (!usedIds.has(item.spot.id) && item.spot.timeSlot === slotKey) {
+            assigned = item.spot;
+            usedIds.add(item.spot.id);
+            break;
+          }
+        }
+
+        // Second pass: any remaining spot
+        if (!assigned) {
+          for (const item of scored) {
+            if (!usedIds.has(item.spot.id)) {
+              assigned = item.spot;
+              usedIds.add(item.spot.id);
+              break;
+            }
+          }
+        }
+
+        // Fallback: free exploration
+        if (!assigned) {
+          assigned = {
+            id: "free-" + d + "-" + s,
+            name: "自由散策",
+            region: region,
+            categories: [],
+            timeSlot: slotKey,
+            hours: 2,
+            description: REGIONS[region] + "の街を自由に散策。気になるカフェやお店に立ち寄ってみましょう。",
+            tip: "地元の人におすすめスポットを聞いてみるのも旅の楽しみ。"
+          };
+        }
+
+        daySlots.push({ slot: TIME_SLOTS[s], spot: assigned });
+      }
+      plan.push(daySlots);
+    }
+
+    // Render
+    let html = "";
+    plan.forEach((daySlots, i) => {
+      html += '<div class="day-card">';
+      html += '<h3>Day ' + (i + 1) + '</h3>';
+      daySlots.forEach(({ slot, spot }) => {
+        html += '<div class="itinerary-slot">';
+        html += '<div class="slot-header">';
+        html += '<span class="slot-label ' + slot.cssClass + '">' + slot.label + '</span>';
+        html += '<span class="slot-name">' + escapeHtml(spot.name) + '</span>';
+        html += '<span class="slot-hours">約' + spot.hours + '時間</span>';
+        html += '</div>';
+        html += '<p class="slot-description">' + escapeHtml(spot.description) + '</p>';
+        if (spot.tip) {
+          html += '<p class="slot-tip">' + escapeHtml(spot.tip) + '</p>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+
+    resultEl.innerHTML = html;
+    regenerateBtn.style.display = "inline-block";
+    resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  generateBtn.addEventListener("click", generatePlan);
+  regenerateBtn.addEventListener("click", generatePlan);
+})();
+</script>
+
+</body>
+</html>

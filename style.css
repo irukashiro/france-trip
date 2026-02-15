@@ -247,6 +247,237 @@ footer a {
   margin-bottom: 10px;
 }
 
+/* Planner — Form */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--blue);
+}
+
+.form-group select,
+.form-group input[type="number"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--white);
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.form-group select:focus,
+.form-group input[type="number"]:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0, 35, 149, 0.1);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+  color: var(--text);
+  cursor: pointer;
+  padding: 6px 14px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.checkbox-group label:hover {
+  background: #f0f0f8;
+  border-color: var(--blue);
+}
+
+.checkbox-group input[type="checkbox"] {
+  accent-color: var(--blue);
+}
+
+.checkbox-group input[type="checkbox"]:checked + span {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+/* Planner — Buttons */
+.btn-primary {
+  display: inline-block;
+  background: var(--blue);
+  color: var(--white);
+  padding: 12px 36px;
+  border: none;
+  border-radius: 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover {
+  background: #003580;
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-secondary {
+  display: inline-block;
+  background: transparent;
+  color: var(--blue);
+  padding: 10px 28px;
+  border: 2px solid var(--blue);
+  border-radius: 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(0, 35, 149, 0.06);
+}
+
+/* Planner — Day cards */
+.day-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+
+.day-card h3 {
+  font-size: 1.2rem;
+  color: var(--blue);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--blue);
+}
+
+/* Planner — Itinerary slots */
+.itinerary-slot {
+  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.itinerary-slot:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.slot-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.slot-label {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.slot-morning {
+  background: #e6a817;
+}
+
+.slot-afternoon {
+  background: #2979b5;
+}
+
+.slot-evening {
+  background: #7b3fa0;
+}
+
+.slot-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.slot-hours {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  margin-left: auto;
+}
+
+.slot-description {
+  color: var(--text-light);
+  font-size: 0.93rem;
+  margin: 4px 0;
+}
+
+.slot-tip {
+  color: #2e7d32;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.slot-tip::before {
+  content: "💡 ";
+}
+
+/* Planner — CTA card */
+.cta-card {
+  text-align: center;
+  padding: 32px 28px;
+  background: linear-gradient(135deg, #f0f0f8, #dceefb);
+}
+
+.cta-card h3 {
+  color: var(--blue);
+}
+
+.cta-card p {
+  color: var(--text-light);
+  margin-bottom: 16px;
+}
+
+.btn-cta-red {
+  display: inline-block;
+  background: var(--red);
+  color: var(--white);
+  padding: 12px 32px;
+  border-radius: 24px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-cta-red:hover {
+  background: #c9202f;
+}
+
+/* Planner — Result area */
+#result {
+  margin-top: 32px;
+}
+
+#result:empty {
+  display: none;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   header {
@@ -273,5 +504,27 @@ footer a {
   th, td {
     padding: 8px 6px;
     font-size: 0.85rem;
+  }
+
+  .day-card {
+    padding: 18px 16px;
+  }
+
+  .checkbox-group {
+    gap: 6px;
+  }
+
+  .checkbox-group label {
+    font-size: 0.82rem;
+    padding: 5px 10px;
+  }
+
+  .slot-header {
+    flex-wrap: wrap;
+  }
+
+  .slot-hours {
+    margin-left: 0;
+    width: 100%;
   }
 }
