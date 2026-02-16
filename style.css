@@ -478,6 +478,200 @@ footer a {
   display: none;
 }
 
+/* Route Map — Layout */
+.route-layout {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.route-map-container {
+  flex: 65;
+  min-width: 0;
+}
+
+#map {
+  height: 520px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 0;
+}
+
+.route-sidebar {
+  flex: 35;
+  min-width: 0;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  max-height: 520px;
+}
+
+.route-sidebar-title {
+  font-size: 1.1rem;
+  color: var(--blue);
+  padding: 16px 18px 0;
+  margin-bottom: 0;
+}
+
+.route-summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 18px 12px;
+  font-size: 0.85rem;
+  color: var(--text-light);
+  border-bottom: 1px solid #eee;
+}
+
+.route-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.route-empty {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.9rem;
+  padding: 24px 0;
+}
+
+.route-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.route-controls .form-group {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+
+/* Route Map — Items */
+.route-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 6px;
+  cursor: grab;
+  transition: background 0.15s, box-shadow 0.15s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.route-item:last-child {
+  border-bottom: none;
+}
+
+.route-item:hover {
+  background: #f5f5fa;
+}
+
+.route-item.dragging {
+  opacity: 0.4;
+}
+
+.route-item.drag-over {
+  box-shadow: inset 0 -2px 0 var(--blue);
+}
+
+.route-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.route-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.route-item-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.route-item-meta {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slot-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.route-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.route-arrow {
+  display: none;
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-light);
+  line-height: 1;
+  padding: 0;
+}
+
+.route-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.route-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #ccc;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.route-remove:hover {
+  color: var(--red);
+}
+
+/* Leaflet marker overrides */
+.route-marker {
+  background: none !important;
+  border: none !important;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   header {
@@ -526,5 +720,32 @@ footer a {
   .slot-hours {
     margin-left: 0;
     width: 100%;
+  }
+
+  .route-layout {
+    flex-direction: column;
+  }
+
+  #map {
+    height: 300px;
+  }
+
+  .route-sidebar {
+    max-height: none;
+  }
+
+  .route-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .route-item {
+    cursor: default;
+  }
+
+  .route-controls {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

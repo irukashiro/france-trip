@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ルートマップ — フランス旅行準備ガイド</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>🇫🇷 ルートマップ</h1>
+    <p class="subtitle">地図上でスポットを確認し、ルートを組み立てよう</p>
+    <nav>
+      <ul>
+        <li><a href="index.html">トップに戻る</a></li>
+        <li><a href="conversations.html">会話集</a></li>
+        <li><a href="planner.html">旅行プランナー</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="max-width:1200px;">
+
+  <section>
+    <h2>ルートを作成</h2>
+    <div class="card route-controls">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label for="region-select">地域を選択</label>
+        <select id="region-select"></select>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn-primary" id="add-all-btn">すべて追加</button>
+        <button class="btn-secondary" id="clear-btn">ルートクリア</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="route-layout">
+    <div class="route-map-container">
+      <div id="map"></div>
+    </div>
+    <div class="route-sidebar">
+      <h3 class="route-sidebar-title">ルート</h3>
+      <div class="route-summary" id="route-summary">
+        <span>0 スポット</span>
+        <span>合計 0 時間</span>
+      </div>
+      <div class="route-list" id="route-list">
+        <p class="route-empty">マーカーをクリックしてスポットを追加してください。</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>フランス旅行準備ガイド &copy; 2026</p>
+    <p>渡航前に必ず<a href="https://www.anzen.mofa.go.jp/" target="_blank" rel="noopener">外務省 海外安全ホームページ</a>で最新情報をご確認ください。</p>
+  </div>
+</footer>
+
+<script src="spots.js"></script>
+<script>
+(function () {
+  /* ── state ── */
+  var route = [];          // array of spot objects in route order
+  var markers = {};        // id -> L.marker
+  var routeLine = null;    // L.polyline
+
+  /* ── time-slot colours ── */
+  var SLOT_COLORS = { morning: "#e6a817", afternoon: "#2979b5", evening: "#7b3fa0" };
+  var SLOT_LABELS = { morning: "午前", afternoon: "午後", evening: "夜" };
+
+  /* ── map init ── */
+  var map = L.map("map").setView([46.6, 2.9], 6);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18
+  }).addTo(map);
+
+  /* ── region select ── */
+  var regionSelect = document.getElementById("region-select");
+  var optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "-- すべての地域 --";
+  regionSelect.appendChild(optAll);
+  Object.entries(REGIONS).forEach(function (entry) {
+    var opt = document.createElement("option");
+    opt.value = entry[0];
+    opt.textContent = entry[1];
+    regionSelect.appendChild(opt);
+  });
+
+  regionSelect.addEventListener("change", function () { showMarkers(); });
+
+  /* ── helpers ── */
+  function escapeHtml(s) {
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function isInRoute(id) {
+    return route.some(function (s) { return s.id === id; });
+  }
+
+  function routeIndex(id) {
+    for (var i = 0; i < route.length; i++) { if (route[i].id === id) return i; }
+    return -1;
+  }
+
+  /* ── marker creation ── */
+  function makeIcon(spot, numbered) {
+    var idx = routeIndex(spot.id);
+    var color = SLOT_COLORS[spot.timeSlot] || "#888";
+    if (numbered && idx >= 0) {
+      return L.divIcon({
+        className: "route-marker",
+        html: '<div style="background:' + color + ';color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);">' + (idx + 1) + '</div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -16]
+      });
+    }
+    return L.divIcon({
+      className: "route-marker",
+      html: '<div style="background:' + color + ';width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -10]
+    });
+  }
+
+  function popupContent(spot) {
+    var inRoute = isInRoute(spot.id);
+    var slotColor = SLOT_COLORS[spot.timeSlot] || "#888";
+    var html = '<div style="min-width:180px;font-size:14px;">';
+    html += '<strong>' + escapeHtml(spot.name) + '</strong>';
+    html += ' <span class="slot-label" style="background:' + slotColor + ';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">' + SLOT_LABELS[spot.timeSlot] + '</span>';
+    html += '<br><span style="color:#555;font-size:12px;">約' + spot.hours + '時間 | ' + escapeHtml(REGIONS[spot.region]) + '</span>';
+    html += '<p style="margin:6px 0;font-size:13px;color:#333;">' + escapeHtml(spot.description) + '</p>';
+    if (inRoute) {
+      html += '<button onclick="window._toggleRouteSpot(\'' + spot.id + '\')" style="background:#ED2939;color:#fff;border:none;padding:6px 14px;border-radius:16px;cursor:pointer;font-size:13px;">ルートから削除</button>';
+    } else {
+      html += '<button onclick="window._toggleRouteSpot(\'' + spot.id + '\')" style="background:#002395;color:#fff;border:none;padding:6px 14px;border-radius:16px;cursor:pointer;font-size:13px;">ルートに追加</button>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  /* ── show markers for selected region ── */
+  function showMarkers() {
+    // clear existing
+    Object.values(markers).forEach(function (m) { map.removeLayer(m); });
+    markers = {};
+
+    var region = regionSelect.value;
+    var spots = region ? SPOTS.filter(function (s) { return s.region === region; }) : SPOTS;
+
+    var bounds = [];
+    spots.forEach(function (spot) {
+      var m = L.marker([spot.lat, spot.lng], { icon: makeIcon(spot, isInRoute(spot.id)) });
+      m.bindPopup(function () { return popupContent(spot); });
+      m.addTo(map);
+      markers[spot.id] = m;
+      bounds.push([spot.lat, spot.lng]);
+    });
+
+    if (bounds.length) {
+      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
+    }
+    setTimeout(function () { map.invalidateSize(); }, 100);
+  }
+
+  /* ── refresh marker icons & route line ── */
+  function refreshMap() {
+    Object.keys(markers).forEach(function (id) {
+      var spot = SPOTS.find(function (s) { return s.id === id; });
+      if (spot) markers[id].setIcon(makeIcon(spot, isInRoute(id)));
+    });
+    // route line
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+    if (route.length >= 2) {
+      var latlngs = route.map(function (s) { return [s.lat, s.lng]; });
+      routeLine = L.polyline(latlngs, { color: "#002395", weight: 3, dashArray: "8 6", opacity: 0.7 });
+      routeLine.addTo(map);
+    }
+  }
+
+  /* ── toggle spot in route (called from popup) ── */
+  window._toggleRouteSpot = function (id) {
+    var idx = routeIndex(id);
+    if (idx >= 0) {
+      route.splice(idx, 1);
+    } else {
+      var spot = SPOTS.find(function (s) { return s.id === id; });
+      if (spot) route.push(spot);
+    }
+    renderRoute();
+    refreshMap();
+    // re-open popup with updated content
+    if (markers[id]) {
+      var spot = SPOTS.find(function (s) { return s.id === id; });
+      if (spot) markers[id].setPopupContent(popupContent(spot));
+    }
+  };
+
+  /* ── render sidebar ── */
+  function renderRoute() {
+    var listEl = document.getElementById("route-list");
+    var summaryEl = document.getElementById("route-summary");
+
+    if (route.length === 0) {
+      listEl.innerHTML = '<p class="route-empty">マーカーをクリックしてスポットを追加してください。</p>';
+      summaryEl.innerHTML = '<span>0 スポット</span><span>合計 0 時間</span>';
+      return;
+    }
+
+    var totalHours = route.reduce(function (sum, s) { return sum + s.hours; }, 0);
+    summaryEl.innerHTML = '<span>' + route.length + ' スポット</span><span>合計 ' + totalHours + ' 時間</span>';
+
+    var html = '';
+    route.forEach(function (spot, i) {
+      var color = SLOT_COLORS[spot.timeSlot] || "#888";
+      html += '<div class="route-item" draggable="true" data-id="' + spot.id + '">';
+      html += '<span class="route-number" style="background:' + color + ';">' + (i + 1) + '</span>';
+      html += '<div class="route-item-info">';
+      html += '<span class="route-item-name">' + escapeHtml(spot.name) + '</span>';
+      html += '<span class="route-item-meta"><span class="slot-badge" style="background:' + color + ';">' + SLOT_LABELS[spot.timeSlot] + '</span> 約' + spot.hours + '時間</span>';
+      html += '</div>';
+      html += '<div class="route-item-actions">';
+      // mobile arrows
+      html += '<button class="route-arrow" data-dir="up" data-id="' + spot.id + '" title="上へ"' + (i === 0 ? ' disabled' : '') + '>&#9650;</button>';
+      html += '<button class="route-arrow" data-dir="down" data-id="' + spot.id + '" title="下へ"' + (i === route.length - 1 ? ' disabled' : '') + '>&#9660;</button>';
+      html += '<button class="route-remove" data-id="' + spot.id + '" title="削除">&times;</button>';
+      html += '</div>';
+      html += '</div>';
+    });
+    listEl.innerHTML = html;
+
+    // attach events
+    listEl.querySelectorAll(".route-remove").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = this.getAttribute("data-id");
+        route.splice(routeIndex(id), 1);
+        renderRoute();
+        refreshMap();
+      });
+    });
+
+    listEl.querySelectorAll(".route-arrow").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = this.getAttribute("data-id");
+        var dir = this.getAttribute("data-dir");
+        var idx = routeIndex(id);
+        if (dir === "up" && idx > 0) {
+          var tmp = route[idx]; route[idx] = route[idx - 1]; route[idx - 1] = tmp;
+        } else if (dir === "down" && idx < route.length - 1) {
+          var tmp = route[idx]; route[idx] = route[idx + 1]; route[idx + 1] = tmp;
+        }
+        renderRoute();
+        refreshMap();
+      });
+    });
+
+    // drag and drop
+    initDragDrop();
+  }
+
+  /* ── drag & drop ── */
+  var dragSrcId = null;
+
+  function initDragDrop() {
+    var items = document.querySelectorAll(".route-item");
+    items.forEach(function (item) {
+      item.addEventListener("dragstart", function (e) {
+        dragSrcId = this.getAttribute("data-id");
+        this.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+      item.addEventListener("dragend", function () {
+        this.classList.remove("dragging");
+        document.querySelectorAll(".route-item").forEach(function (el) { el.classList.remove("drag-over"); });
+      });
+      item.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        this.classList.add("drag-over");
+      });
+      item.addEventListener("dragleave", function () {
+        this.classList.remove("drag-over");
+      });
+      item.addEventListener("drop", function (e) {
+        e.preventDefault();
+        this.classList.remove("drag-over");
+        var targetId = this.getAttribute("data-id");
+        if (dragSrcId && dragSrcId !== targetId) {
+          var srcIdx = routeIndex(dragSrcId);
+          var tgtIdx = routeIndex(targetId);
+          var moved = route.splice(srcIdx, 1)[0];
+          route.splice(tgtIdx, 0, moved);
+          renderRoute();
+          refreshMap();
+        }
+      });
+    });
+  }
+
+  /* ── buttons ── */
+  document.getElementById("add-all-btn").addEventListener("click", function () {
+    var region = regionSelect.value;
+    var spots = region ? SPOTS.filter(function (s) { return s.region === region; }) : SPOTS;
+    spots.forEach(function (spot) {
+      if (!isInRoute(spot.id)) route.push(spot);
+    });
+    renderRoute();
+    refreshMap();
+  });
+
+  document.getElementById("clear-btn").addEventListener("click", function () {
+    route = [];
+    renderRoute();
+    refreshMap();
+  });
+
+  /* ── init ── */
+  showMarkers();
+  setTimeout(function () { map.invalidateSize(); }, 200);
+})();
+</script>
+
+</body>
+</html>
